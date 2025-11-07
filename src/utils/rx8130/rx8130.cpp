@@ -81,6 +81,14 @@ bool RX8130_Class::begin()
     return result;
 }
 
+void RX8130_Class::initBat()
+{
+    uint8_t data = readRegister8(RX8130_REG_CTRL1);
+    // Enable backup battery charging
+    data |= 0b00110000;
+    writeRegister8(RX8130_REG_CTRL1, data);
+}
+
 void RX8130_Class::setTime(struct tm *time)
 {
     uint8_t rbuf = 0;

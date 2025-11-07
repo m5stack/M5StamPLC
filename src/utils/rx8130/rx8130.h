@@ -18,6 +18,7 @@ public:
 
     bool begin();
 
+    void initBat();
     void setTime(struct tm *time);
     void getTime(struct tm *time);
     void clearIrqFlags();

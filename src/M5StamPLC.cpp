@@ -233,6 +233,7 @@ void M5_STAMPLC::rx8130_init()
     if (!RX8130.begin()) {
         ESP_LOGE(TAG, "rx8130 init failed!");
     } else {
+        RX8130.initBat();
         RX8130.disableIrq();
         RX8130.clearIrqFlags();
     }
