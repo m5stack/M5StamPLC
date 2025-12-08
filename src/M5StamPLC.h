@@ -151,6 +151,20 @@ public:
      */
     void noTone();
 
+    /**
+     * @brief Get the IOExpander A, this is the IOExpander that controls the status light and button A/B/C
+     *
+     * @return m5::IOExpander_Base&
+     */
+    m5::IOExpander_Base& getIOExpanderA();
+
+    /**
+     * @brief Get the IOExpander B, this is the IOExpander that controls the plc relays and plc inputs
+     *
+     * @return AW9523_Class&
+     */
+    AW9523_Class& getIOExpanderB();
+
 protected:
     AW9523_Class* _io_expander_b = nullptr;  // Controls plc relays, plc inputs
     Config_t _config;
