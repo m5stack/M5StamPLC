@@ -71,6 +71,9 @@ void M5_STAMPLC::io_expander_a_init()
     ioe.setDirection(6, true);
     ioe.setPullMode(6, false);
     ioe.setHighImpedance(6, true);
+
+    ioe.resetIrq();
+    ioe.disableIrq();
 }
 
 m5::IOExpander_Base& M5_STAMPLC::getIOExpanderA()
