@@ -29,77 +29,33 @@ unsigned long last_scan_time = 0;
 void initModules()
 {
     for (int i = 0; i < MAX_MODULES; i++) {
-        modules[i].address          = 0;
+        modules[i].address          = M5StamPLC_IO::I2C_ADDR_MIN + i;
         modules[i].firmware_version = 0;
         modules[i].connected        = false;
     }
     module_count = 0;
 }
 
-int findModuleSlot(uint8_t addr)
-{
-    for (int i = 0; i < MAX_MODULES; i++) {
-        if (modules[i].address == addr && modules[i].connected) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-int getEmptySlot()
-{
-    for (int i = 0; i < MAX_MODULES; i++) {
-        if (!modules[i].connected) {
-            return i;
-        }
-    }
-    return -1;
-}
-
 void scanModules()
 {
-    uint8_t detected[16];
-    uint8_t detected_count = 0;
-
-    for (uint8_t addr = M5StamPLC_IO::I2C_ADDR_MIN; addr <= M5StamPLC_IO::I2C_ADDR_MAX; addr++) {
-        Wire.beginTransmission(addr);
-        if (Wire.endTransmission() == 0) {
-            detected[detected_count++] = addr;
-
-            int slot = findModuleSlot(addr);
-            if (slot == -1) {
-                slot = getEmptySlot();
-                if (slot != -1) {
-                    M5StamPLC_IO temp_device;
-                    if (temp_device.begin(addr, false)) {
-                        modules[slot].address          = addr;
-                        modules[slot].firmware_version = temp_device.getFirmwareVersion();
-                        modules[slot].connected        = true;
-                        module_count++;
-                        Serial.printf("[+] Module connected: 0x%02X (FW: 0x%02X)\n", addr,
-                                      modules[slot].firmware_version);
-                    }
-                }
-            }
-        }
-    }
+    bool found_map[0x80] = {false};
+    m5::In_I2C.scanID(found_map);
 
     for (int i = 0; i < MAX_MODULES; i++) {
-        if (modules[i].connected) {
-            bool still_present = false;
-            for (int j = 0; j < detected_count; j++) {
-                if (detected[j] == modules[i].address) {
-                    still_present = true;
-                    break;
-                }
+        uint8_t addr = M5StamPLC_IO::I2C_ADDR_MIN + i;
+        if (found_map[addr] && !modules[i].connected) {
+            M5StamPLC_IO temp_device;
+            if (temp_device.begin(addr, false)) {
+                modules[i].address          = addr;
+                modules[i].firmware_version = temp_device.getFirmwareVersion();
+                modules[i].connected        = true;
+                module_count++;
+                Serial.printf("[+] Module connected: 0x%02X (FW: 0x%02X)\n", addr, modules[i].firmware_version);
             }
-
-            if (!still_present) {
-                Serial.printf("[-] Module disconnected: 0x%02X\n", modules[i].address);
-                modules[i].connected = false;
-                modules[i].address   = 0;
-                module_count--;
-            }
+        } else if (!found_map[addr] && modules[i].connected) {
+            Serial.printf("[-] Module disconnected: 0x%02X\n", modules[i].address);
+            modules[i].connected = false;
+            module_count--;
         }
     }
 }
@@ -138,6 +94,9 @@ void setup()
     M5StamPLC.Display.setTextScroll(false);
     M5StamPLC.Display.setTextSize(1);
     M5StamPLC.Display.setFont(&fonts::efontCN_16);
+
+    Serial.begin(115200);
+    Serial.println("\n=== M5StamPLC IO Hot-Plug Detection ===");
 
     initModules();
 

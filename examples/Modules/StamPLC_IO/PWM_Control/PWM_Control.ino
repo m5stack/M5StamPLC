@@ -55,7 +55,6 @@ void updateDisplay()
 
 void setup()
 {
-    /* Init M5StamPLC */
     M5StamPLC.begin();
     M5StamPLC.Display.setTextScroll(false);
     M5StamPLC.Display.setTextSize(1);
@@ -73,13 +72,11 @@ void setup()
 
     delay(2000);
 
-    // Read current PWM settings
     pwm_mode = stamplc_io.getPWMMode();
     pwm_freq = stamplc_io.getPWMFrequency();
     ch1_duty = stamplc_io.getChannelDuty(1);
     ch2_duty = stamplc_io.getChannelDuty(2);
 
-    // If frequency is 0, set to default 50Hz
     if (pwm_freq == 0) {
         pwm_freq = 50;
         stamplc_io.setPWMFrequency(pwm_freq);
