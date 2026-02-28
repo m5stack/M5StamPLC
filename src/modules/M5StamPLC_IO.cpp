@@ -10,7 +10,7 @@ static const char* _tag = "M5StamPLC_IO";
 
 bool M5StamPLC_IO::begin(uint8_t addr, bool debug)
 {
-    esp_log_level_set(_tag, debug ? ESP_LOG_DEBUG : ESP_LOG_NONE);
+    esp_log_level_set(_tag, debug ? ESP_LOG_INFO : ESP_LOG_WARN);
 
     if (addr == 0) {
         _current_addr = scanI2CDevices();
@@ -552,9 +552,13 @@ M5StamPLC_IO* M5StamPLC_IO_Manager::getByAddr(uint8_t addr)
 void M5StamPLC_IO_Manager::_scan()
 {
     bool found[0x80] = {false};
-    m5::In_I2C.scanID(found);
-
-    bool changed = false;
+    bool changed     = false;
+    for (uint8_t addr = M5StamPLC_IO::I2C_ADDR_MIN; addr <= M5StamPLC_IO::I2C_ADDR_MAX; addr++) {
+        if (m5::In_I2C.scanID(addr)) {
+            ESP_LOGI(_tag, "Found I2C device: 0x%02X", addr);
+            found[addr] = true;
+        }
+    }
 
     for (uint8_t i = 0; i < MAX_DEVICES; i++) {
         uint8_t addr = M5StamPLC_IO::I2C_ADDR_MIN + i;
@@ -595,7 +599,10 @@ void M5StamPLC_IO_Manager::_applyAddrChange(uint8_t old_idx, uint8_t new_dip)
     uint8_t new_idx  = new_dip - M5StamPLC_IO::I2C_ADDR_MIN;
     uint8_t old_addr = M5StamPLC_IO::I2C_ADDR_MIN + old_idx;
 
-    if (_slots[new_idx].connected) return;  // address conflict, skip
+    if (_slots[new_idx].connected) {
+        ESP_LOGE(_tag, "Address conflict! Dev at 0x%02X wants to move to 0x%02X, but slot is busy.", old_addr, new_dip);
+        return;
+    }
 
     // Write (new_dip | 0x80): firmware validates bit6:0 == DIP, then updates I2C address.
     // After this call, _slots[old_idx].io._current_addr == new_dip internally.
