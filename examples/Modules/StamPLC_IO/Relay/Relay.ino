@@ -7,11 +7,9 @@
 #include <M5StamPLC.h>
 
 M5StamPLC_IO stamplc_io;
-bool relay_state[3]           = {false, false, false};
-uint8_t expected_address      = 0;
-uint8_t last_expected_address = 0;
-bool btnB_longPressed         = false;
-bool btnC_longPressed         = false;
+bool relay_state[3]   = {false, false, false};
+bool btnB_longPressed = false;
+bool btnC_longPressed = false;
 
 void setup()
 {
@@ -28,7 +26,6 @@ void setup()
         delay(1000);
     }
 
-    last_expected_address = expected_address = stamplc_io.getExpectedAddress();
     M5StamPLC.Display.printf("M5StamPLC IO found in 0x%02X\n", stamplc_io.getCurrentAddress());
     M5StamPLC.Display.printf("Firmware Version: 0x%02X\n", stamplc_io.getFirmwareVersion());
     M5StamPLC.Display.printf("push A/B/C to switch relay\n");
@@ -69,10 +66,8 @@ void loop()
         btnC_longPressed = false;
     }
 
-    expected_address = stamplc_io.getExpectedAddress();
-    if (expected_address != last_expected_address) {
-        M5StamPLC.Display.printf("Expected Address 0x%02X -> 0x%02X\n", last_expected_address, expected_address);
-        last_expected_address = expected_address;
+    if (stamplc_io.syncAddress()) {
+        M5StamPLC.Display.printf("Address changed to 0x%02X\n", stamplc_io.getCurrentAddress());
     }
 
     delay(10);

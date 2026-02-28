@@ -5,17 +5,11 @@
  *
  * M5StamPLC IO PWM Control Example
  *
- * This example demonstrates how to use the PWM control function of the M5StamPLC IO module:
- * - Switch between IO mode and PWM mode
- * - Set PWM frequency (1-100 Hz)
- * - Adjust CH1 and CH2 duty cycle (0-1000 thousandths)
- *
- * Button functions:
- * - Button A: Toggle PWM mode on/off
- * - Button B: Increase CH1 duty cycle (+10%)
- * - Long press B: Decrease CH1 duty cycle (-10%)
- * - Button C: Increase CH2 duty cycle (+10%)
- * - Long press C: Decrease CH2 duty cycle (-10%)
+ * Button A:        Toggle PWM mode on/off
+ * Button B:        CH1 duty +10%
+ * Long press B:    CH1 duty -10%
+ * Button C:        CH2 duty +10%
+ * Long press C:    CH2 duty -10%
  */
 #include <Arduino.h>
 #include <M5StamPLC.h>
@@ -29,8 +23,6 @@ uint16_t ch2_duty     = 0;
 bool btnB_longPressed = false;
 bool btnC_longPressed = false;
 
-unsigned long lastUpdateTime = 0;
-
 void updateDisplay()
 {
     M5StamPLC.Display.fillScreen(TFT_BLACK);
@@ -40,17 +32,15 @@ void updateDisplay()
     M5StamPLC.Display.println("=== PWM Control ===");
 
     M5StamPLC.Display.setTextColor(TFT_CYAN);
-    M5StamPLC.Display.printf("Mode: %s\n", pwm_mode ? "PWM" : "IO");
-    M5StamPLC.Display.printf("Frequency: %d Hz\n", pwm_freq);
+    M5StamPLC.Display.printf("Mode: %s  Freq: %dHz\n", pwm_mode ? "PWM" : "IO", pwm_freq);
 
     M5StamPLC.Display.setTextColor(TFT_YELLOW);
-    M5StamPLC.Display.printf("CH1 Duty: %d.%d%% (%d/1000)\n", ch1_duty / 10, ch1_duty % 10, ch1_duty);
-    M5StamPLC.Display.printf("CH2 Duty: %d.%d%% (%d/1000)\n", ch2_duty / 10, ch2_duty % 10, ch2_duty);
+    M5StamPLC.Display.printf("CH1: %d.%d%% (%d/1000)\n", ch1_duty / 10, ch1_duty % 10, ch1_duty);
+    M5StamPLC.Display.printf("CH2: %d.%d%% (%d/1000)\n", ch2_duty / 10, ch2_duty % 10, ch2_duty);
 
     M5StamPLC.Display.setTextColor(TFT_DARKGREY);
     M5StamPLC.Display.println("A: Toggle PWM mode");
-    M5StamPLC.Display.println("B: CH1+ Long press: CH1-");
-    M5StamPLC.Display.println("C: CH2+ Long press: CH2-");
+    M5StamPLC.Display.println("B/C: duty+  Long: duty-");
 }
 
 void setup()
@@ -61,16 +51,13 @@ void setup()
     M5StamPLC.Display.setFont(&fonts::efontCN_16);
     M5StamPLC.Display.println("Try to find M5StamPLC IO module...");
 
-    /* Init M5StamPLC IO */
     while (!stamplc_io.begin()) {
         M5StamPLC.Display.println("Not found, retry in 1s...");
         delay(1000);
     }
 
-    M5StamPLC.Display.printf("Found IO module: 0x%02X\n", stamplc_io.getCurrentAddress());
-    M5StamPLC.Display.printf("Firmware Version: 0x%02X\n", stamplc_io.getFirmwareVersion());
-
-    delay(2000);
+    M5StamPLC.Display.printf("Found: 0x%02X  FW: 0x%02X\n", stamplc_io.getCurrentAddress(),
+                             stamplc_io.getFirmwareVersion());
 
     pwm_mode = stamplc_io.getPWMMode();
     pwm_freq = stamplc_io.getPWMFrequency();
@@ -83,7 +70,6 @@ void setup()
     }
 
     updateDisplay();
-    lastUpdateTime = millis();
 }
 
 void loop()
@@ -92,60 +78,41 @@ void loop()
 
     bool needUpdate = false;
 
-    // Button A: Toggle PWM mode
     if (M5StamPLC.BtnA.wasClicked()) {
         pwm_mode = !pwm_mode;
         stamplc_io.setPWMMode(pwm_mode);
         needUpdate = true;
     }
 
-    // Button B: Adjust CH1 duty cycle
     if (M5StamPLC.BtnB.wasClicked()) {
-        // Increase 10% (100/1000)
-        ch1_duty += 100;
-        if (ch1_duty > 1000) ch1_duty = 1000;
+        ch1_duty = (ch1_duty + 100 > 1000) ? 1000 : ch1_duty + 100;
         stamplc_io.setChannelDuty(1, ch1_duty);
         needUpdate = true;
     } else if (M5StamPLC.BtnB.pressedFor(500) && !btnB_longPressed) {
-        // Decrease 10%
         btnB_longPressed = true;
-        if (ch1_duty >= 100) {
-            ch1_duty -= 100;
-        } else {
-            ch1_duty = 0;
-        }
+        ch1_duty         = (ch1_duty >= 100) ? ch1_duty - 100 : 0;
         stamplc_io.setChannelDuty(1, ch1_duty);
         needUpdate = true;
     } else if (!M5StamPLC.BtnB.isPressed()) {
         btnB_longPressed = false;
     }
 
-    // Button C: Adjust CH2 duty cycle
     if (M5StamPLC.BtnC.wasClicked()) {
-        // Increase 10% (100/1000)
-        ch2_duty += 100;
-        if (ch2_duty > 1000) ch2_duty = 1000;
+        ch2_duty = (ch2_duty + 100 > 1000) ? 1000 : ch2_duty + 100;
         stamplc_io.setChannelDuty(2, ch2_duty);
         needUpdate = true;
     } else if (M5StamPLC.BtnC.pressedFor(500) && !btnC_longPressed) {
-        // Decrease 10%
         btnC_longPressed = true;
-        if (ch2_duty >= 100) {
-            ch2_duty -= 100;
-        } else {
-            ch2_duty = 0;
-        }
+        ch2_duty         = (ch2_duty >= 100) ? ch2_duty - 100 : 0;
         stamplc_io.setChannelDuty(2, ch2_duty);
         needUpdate = true;
     } else if (!M5StamPLC.BtnC.isPressed()) {
         btnC_longPressed = false;
     }
 
-    // Periodically update display
-    if (needUpdate || (millis() - lastUpdateTime > 1000)) {
-        updateDisplay();
-        lastUpdateTime = millis();
-    }
+    if (stamplc_io.syncAddress()) needUpdate = true;
+
+    if (needUpdate) updateDisplay();
 
     delay(10);
 }

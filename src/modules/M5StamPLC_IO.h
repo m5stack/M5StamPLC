@@ -181,6 +181,18 @@ public:
     void setNewAddress(uint8_t newAddr);
 
     /**
+     * @brief Check if the DIP-switch address has changed and apply it if so.
+     *
+     * Reads REG_ADDR_CONFIG bit6:0 (DIP-switch position) and compares with the
+     * current I2C address. If different, calls setNewAddress() to apply the change.
+     * Call this periodically in loop() when DIP-switch hot-swap is needed.
+     *
+     * @return true  if the address was updated
+     * @return false if no change detected
+     */
+    bool syncAddress();
+
+    /**
      * @brief Toggle IO control bit
      *
      * @param bit bit number to toggle
@@ -313,4 +325,119 @@ public:
 
 protected:
     uint8_t _current_addr = 0;
+};
+
+/**
+ * @brief Multi-device hot-plug manager for M5StamPLC IO modules.
+ *
+ * Scans the I2C bus periodically (0x20-0x2F), detects module insertion /
+ * removal, and applies DIP-switch address changes on-the-fly.
+ *
+ * Address-change protocol (REG_ADDR_CONFIG = 0xFF):
+ *   Read  bit6:0  - current DIP-switch address (hardware, read-only)
+ *   Write bit6:0 + bit7=1 - firmware validates written value == DIP reading,
+ *                           on match I2C address is updated, bit7 auto-clears
+ *
+ * Usage:
+ *   M5StamPLC_IO_Manager mgr;
+ *   mgr.onConnect([](M5StamPLC_IO& dev, uint8_t addr) { ... });
+ *   mgr.onDisconnect([](uint8_t addr) { ... });
+ *   mgr.onAddrChange([](uint8_t old_addr, uint8_t new_addr) { ... });
+ *   mgr.begin();   // call once in setup()
+ *   mgr.update();  // call in loop()
+ */
+class M5StamPLC_IO_Manager {
+public:
+    static constexpr uint8_t MAX_DEVICES = 16;
+
+    struct Slot {
+        M5StamPLC_IO io;
+        bool connected   = false;
+        uint8_t dip_addr = 0;
+        uint8_t fw_ver   = 0;
+    };
+
+    using ConnectCb    = void (*)(M5StamPLC_IO& dev, uint8_t addr);
+    using DisconnectCb = void (*)(uint8_t addr);
+    using AddrChangeCb = void (*)(uint8_t old_addr, uint8_t new_addr);
+
+    /**
+     * @brief Initial scan, call once in setup()
+     *
+     * @param interval_ms Scan interval in milliseconds (default: 2000)
+     */
+    void begin(uint32_t interval_ms = 2000);
+
+    /**
+     * @brief Periodic scan, call in loop()
+     */
+    void update();
+
+    /**
+     * @brief Register callback invoked when a module is connected
+     *
+     * @param cb Callback function pointer: void cb(M5StamPLC_IO& dev, uint8_t addr)
+     */
+    void onConnect(ConnectCb cb)
+    {
+        _on_connect = cb;
+    }
+
+    /**
+     * @brief Register callback invoked when a module is disconnected
+     *
+     * @param cb Callback function pointer: void cb(uint8_t addr)
+     */
+    void onDisconnect(DisconnectCb cb)
+    {
+        _on_disconnect = cb;
+    }
+
+    /**
+     * @brief Register callback invoked when a module's DIP-switch address changes
+     *
+     * @param cb Callback function pointer: void cb(uint8_t old_addr, uint8_t new_addr)
+     */
+    void onAddrChange(AddrChangeCb cb)
+    {
+        _on_addr_change = cb;
+    }
+
+    /**
+     * @brief Get number of currently connected modules
+     *
+     * @return Number of connected modules
+     */
+    uint8_t count() const
+    {
+        return _count;
+    }
+
+    /**
+     * @brief Get a connected module by sequential index
+     *
+     * @param index Index in range 0 to count()-1
+     * @return Pointer to M5StamPLC_IO, or nullptr if out of range
+     */
+    M5StamPLC_IO* get(uint8_t index);
+
+    /**
+     * @brief Get a connected module by its I2C address
+     *
+     * @param addr I2C address (0x20-0x2F)
+     * @return Pointer to M5StamPLC_IO, or nullptr if not connected
+     */
+    M5StamPLC_IO* getByAddr(uint8_t addr);
+
+private:
+    Slot _slots[MAX_DEVICES];
+    uint8_t _count               = 0;
+    uint32_t _interval_ms        = 2000;
+    unsigned long _last_ms       = 0;
+    ConnectCb _on_connect        = nullptr;
+    DisconnectCb _on_disconnect  = nullptr;
+    AddrChangeCb _on_addr_change = nullptr;
+
+    void _scan();
+    void _applyAddrChange(uint8_t old_idx, uint8_t new_dip);
 };

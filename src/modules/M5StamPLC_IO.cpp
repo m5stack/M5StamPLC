@@ -10,7 +10,7 @@ static const char* _tag = "M5StamPLC_IO";
 
 bool M5StamPLC_IO::begin(uint8_t addr, bool debug)
 {
-    esp_log_level_set(_tag, debug ? ESP_LOG_DEBUG : ESP_LOG_NONE);
+    esp_log_level_set(_tag, debug ? ESP_LOG_INFO : ESP_LOG_WARN);
 
     if (addr == 0) {
         _current_addr = scanI2CDevices();
@@ -235,6 +235,19 @@ void M5StamPLC_IO::setNewAddress(uint8_t newAddr)
 
     ESP_LOGI(_tag, "Set new address: 0x%02X", newAddr);
     _current_addr = newAddr;
+}
+
+bool M5StamPLC_IO::syncAddress()
+{
+    uint8_t dip_addr = getExpectedAddress();
+
+    if (dip_addr == _current_addr || dip_addr < I2C_ADDR_MIN || dip_addr > I2C_ADDR_MAX) {
+        return false;
+    }
+
+    ESP_LOGI(_tag, "DIP address changed: 0x%02X -> 0x%02X, applying", _current_addr, dip_addr);
+    setNewAddress(dip_addr);
+    return true;
 }
 
 void M5StamPLC_IO::toggleIOBit(uint8_t bit)
@@ -498,4 +511,106 @@ uint16_t M5StamPLC_IO::getChannelDuty(uint8_t channel)
         ESP_LOGW(_tag, "Failed to read CH%d duty cycle", channel);
         return 0;
     }
+}
+
+/* M5StamPLC_IO_Manager */
+
+void M5StamPLC_IO_Manager::begin(uint32_t interval_ms)
+{
+    _interval_ms = interval_ms;
+    _scan();
+    _last_ms = millis();
+}
+
+void M5StamPLC_IO_Manager::update()
+{
+    if (millis() - _last_ms >= _interval_ms) {
+        _last_ms = millis();  // update before scan so _scan() can override to 0 for fast retry
+        _scan();
+    }
+}
+
+M5StamPLC_IO* M5StamPLC_IO_Manager::get(uint8_t index)
+{
+    uint8_t n = 0;
+    for (uint8_t i = 0; i < MAX_DEVICES; i++) {
+        if (_slots[i].connected) {
+            if (n == index) return &_slots[i].io;
+            n++;
+        }
+    }
+    return nullptr;
+}
+
+M5StamPLC_IO* M5StamPLC_IO_Manager::getByAddr(uint8_t addr)
+{
+    if (addr < M5StamPLC_IO::I2C_ADDR_MIN || addr > M5StamPLC_IO::I2C_ADDR_MAX) return nullptr;
+    uint8_t idx = addr - M5StamPLC_IO::I2C_ADDR_MIN;
+    return _slots[idx].connected ? &_slots[idx].io : nullptr;
+}
+
+void M5StamPLC_IO_Manager::_scan()
+{
+    bool found[0x80] = {false};
+    bool changed     = false;
+    for (uint8_t addr = M5StamPLC_IO::I2C_ADDR_MIN; addr <= M5StamPLC_IO::I2C_ADDR_MAX; addr++) {
+        if (m5::In_I2C.scanID(addr)) {
+            ESP_LOGI(_tag, "Found I2C device: 0x%02X", addr);
+            found[addr] = true;
+        }
+    }
+
+    for (uint8_t i = 0; i < MAX_DEVICES; i++) {
+        uint8_t addr = M5StamPLC_IO::I2C_ADDR_MIN + i;
+        Slot& s      = _slots[i];
+
+        if (found[addr] && !s.connected) {
+            if (s.io.begin(addr, false)) {
+                s.connected = true;
+                s.dip_addr  = s.io.getExpectedAddress();
+                s.fw_ver    = s.io.getFirmwareVersion();
+                _count++;
+                changed = true;
+                if (_on_connect) _on_connect(s.io, addr);
+            }
+        } else if (!found[addr] && s.connected) {
+            s.connected = false;
+            if (_count > 0) _count--;
+            changed = true;
+            if (_on_disconnect) _on_disconnect(addr);
+        } else if (found[addr] && s.connected) {
+            uint8_t new_dip = s.io.getExpectedAddress();
+            if (new_dip != s.dip_addr && new_dip >= M5StamPLC_IO::I2C_ADDR_MIN &&
+                new_dip <= M5StamPLC_IO::I2C_ADDR_MAX) {
+                _applyAddrChange(i, new_dip);
+                changed = true;
+            }
+        }
+    }
+
+    // Any topology change triggers an immediate follow-up scan on the next update() call.
+    if (changed) {
+        _last_ms = 0;
+    }
+}
+
+void M5StamPLC_IO_Manager::_applyAddrChange(uint8_t old_idx, uint8_t new_dip)
+{
+    uint8_t new_idx  = new_dip - M5StamPLC_IO::I2C_ADDR_MIN;
+    uint8_t old_addr = M5StamPLC_IO::I2C_ADDR_MIN + old_idx;
+
+    if (_slots[new_idx].connected) {
+        ESP_LOGE(_tag, "Address conflict! Dev at 0x%02X wants to move to 0x%02X, but slot is busy.", old_addr, new_dip);
+        return;
+    }
+
+    // Write (new_dip | 0x80): firmware validates bit6:0 == DIP, then updates I2C address.
+    // After this call, _slots[old_idx].io._current_addr == new_dip internally.
+    _slots[old_idx].io.setNewAddress(new_dip);
+
+    _slots[new_idx]           = _slots[old_idx];
+    _slots[new_idx].dip_addr  = new_dip;
+    _slots[old_idx].connected = false;
+
+    if (_on_addr_change) _on_addr_change(old_addr, new_dip);
 }
