@@ -45,15 +45,30 @@ public:
     void begin();
     void update();
 
-    LGFX_Device& Display = M5.Display;
-    LGFX_Device& Lcd     = M5.Lcd;
-
     LM75B_Class LM75B;
     INA226_Class INA226;
     RX8130_Class RX8130;
-    Button_Class& BtnA = M5.BtnA;
-    Button_Class& BtnB = M5.BtnB;
-    Button_Class& BtnC = M5.BtnC;
+
+    inline LGFX_Device& Display()
+    {
+        return M5.Display;
+    }
+    inline LGFX_Device& Lcd()
+    {
+        return M5.Lcd;
+    }
+    inline Button_Class& BtnA()
+    {
+        return M5.BtnA;
+    }
+    inline Button_Class& BtnB()
+    {
+        return M5.BtnB;
+    }
+    inline Button_Class& BtnC()
+    {
+        return M5.BtnC;
+    }
 
     /**
      * @brief Set Status Light
