@@ -6,13 +6,13 @@
 #include <Arduino.h>
 #include <M5StamPLC.h>
 
-M5Canvas canvas(&M5StamPLC.Display);
+M5Canvas canvas(&M5StamPLC.Display());
 M5StamPLC_IO stamplc_io;
 
 void setup()
 {
     M5StamPLC.begin();
-    canvas.createSprite(M5StamPLC.Display.width(), M5StamPLC.Display.height());
+    canvas.createSprite(M5StamPLC.Display().width(), M5StamPLC.Display().height());
     canvas.setTextScroll(true);
     canvas.fillScreen(TFT_BLACK);
     canvas.setTextSize(1);
@@ -48,7 +48,7 @@ void setup()
     canvas.setTextColor(TFT_YELLOW);
     canvas.println("press BtnC to start monitoring");
     canvas.pushSprite(0, 0);
-    while (!M5StamPLC.BtnC.isPressed()) {
+    while (!M5StamPLC.BtnC().isPressed()) {
         M5StamPLC.update();
         delay(10);
     }
@@ -90,8 +90,8 @@ void loop()
         canvas.printf("System: %s\n", sys_status == 0 ? "Normal" : "Error");
     }
 
-    if (M5StamPLC.BtnA.wasClicked()) stamplc_io.toggleIOBit(M5StamPLC_IO::BIT_CH1_PU_EN);
-    if (M5StamPLC.BtnB.wasClicked()) stamplc_io.toggleIOBit(M5StamPLC_IO::BIT_CH2_PU_EN);
+    if (M5StamPLC.BtnA().wasClicked()) stamplc_io.toggleIOBit(M5StamPLC_IO::BIT_CH1_PU_EN);
+    if (M5StamPLC.BtnB().wasClicked()) stamplc_io.toggleIOBit(M5StamPLC_IO::BIT_CH2_PU_EN);
 
     if (stamplc_io.syncAddress()) {
         canvas.printf("Address changed to 0x%02X\n", stamplc_io.getCurrentAddress());

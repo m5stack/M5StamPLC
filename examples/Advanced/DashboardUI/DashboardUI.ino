@@ -34,20 +34,20 @@ void update_time_and_date()
 void update_button_events()
 {
     /* If button clicked, log out */
-    if (M5StamPLC.BtnA.wasClicked()) {
+    if (M5StamPLC.BtnA().wasClicked()) {
         dashboard_ui.console_log("BtnA click");
     }
-    if (M5StamPLC.BtnB.wasClicked()) {
+    if (M5StamPLC.BtnB().wasClicked()) {
         dashboard_ui.console_log("BtnB click");
     }
-    if (M5StamPLC.BtnC.wasClicked()) {
+    if (M5StamPLC.BtnC().wasClicked()) {
         dashboard_ui.console_log("BtnC click");
     }
 
     /* Play button press and release tone */
-    if (M5StamPLC.BtnA.wasPressed() || M5StamPLC.BtnB.wasPressed() || M5StamPLC.BtnC.wasPressed()) {
+    if (M5StamPLC.BtnA().wasPressed() || M5StamPLC.BtnB().wasPressed() || M5StamPLC.BtnC().wasPressed()) {
         M5StamPLC.tone(600, 20);
-    } else if (M5StamPLC.BtnA.wasReleased() || M5StamPLC.BtnB.wasReleased() || M5StamPLC.BtnC.wasReleased()) {
+    } else if (M5StamPLC.BtnA().wasReleased() || M5StamPLC.BtnB().wasReleased() || M5StamPLC.BtnC().wasReleased()) {
         M5StamPLC.tone(800, 20);
     }
 }
@@ -89,7 +89,7 @@ void setup()
     M5StamPLC.begin();
 
     /* Init dashboard UI */
-    dashboard_ui.init(&M5StamPLC.Display);
+    dashboard_ui.init(&M5StamPLC.Display());
 
     /* Create a task to write relay regularly */
     xTaskCreate(task_write_relay_regularly, "relay", 2048, NULL, 15, NULL);
