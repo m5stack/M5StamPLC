@@ -31,31 +31,31 @@ void onAddrChange(uint8_t old_addr, uint8_t new_addr)
 
 void updateDisplay()
 {
-    M5StamPLC.Display.fillScreen(TFT_BLACK);
-    M5StamPLC.Display.setCursor(0, 0);
+    M5StamPLC.Display().fillScreen(TFT_BLACK);
+    M5StamPLC.Display().setCursor(0, 0);
 
-    M5StamPLC.Display.setTextColor(TFT_GREENYELLOW);
-    M5StamPLC.Display.println("== Multi IO HotPlug ==");
+    M5StamPLC.Display().setTextColor(TFT_GREENYELLOW);
+    M5StamPLC.Display().println("== Multi IO HotPlug ==");
 
-    M5StamPLC.Display.setTextColor(TFT_CYAN);
-    M5StamPLC.Display.printf("Online: %d\n\n", io_mgr.count());
+    M5StamPLC.Display().setTextColor(TFT_CYAN);
+    M5StamPLC.Display().printf("Online: %d\n\n", io_mgr.count());
 
     for (uint8_t i = 0; i < io_mgr.count() && i < 6; i++) {
         M5StamPLC_IO* dev = io_mgr.get(i);
         uint8_t addr      = dev->getCurrentAddress();
-        M5StamPLC.Display.setTextColor(TFT_GREEN);
-        M5StamPLC.Display.printf("0x%02X  FW:0x%02X", addr, dev->getFirmwareVersion());
-        M5StamPLC.Display.setTextColor(TFT_YELLOW);
-        M5StamPLC.Display.printf("  DIP:0x%02X\n", dev->getExpectedAddress());
+        M5StamPLC.Display().setTextColor(TFT_GREEN);
+        M5StamPLC.Display().printf("0x%02X  FW:0x%02X", addr, dev->getFirmwareVersion());
+        M5StamPLC.Display().setTextColor(TFT_YELLOW);
+        M5StamPLC.Display().printf("  DIP:0x%02X\n", dev->getExpectedAddress());
     }
 }
 
 void setup()
 {
     M5StamPLC.begin();
-    M5StamPLC.Display.setTextScroll(false);
-    M5StamPLC.Display.setTextSize(1);
-    M5StamPLC.Display.setFont(&fonts::efontCN_16);
+    M5StamPLC.Display().setTextScroll(false);
+    M5StamPLC.Display().setTextSize(1);
+    M5StamPLC.Display().setFont(&fonts::efontCN_16);
 
     Serial.begin(115200);
     Serial.println("\n=== M5StamPLC IO Multi-Device Hot-Plug ===");

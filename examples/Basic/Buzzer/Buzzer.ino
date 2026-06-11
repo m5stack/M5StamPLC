@@ -23,13 +23,13 @@ void loop()
     M5StamPLC.update();
 
     /* Play tone if button was clicked */
-    if (M5StamPLC.BtnA.wasClicked()) {
+    if (M5StamPLC.BtnA().wasClicked()) {
         M5StamPLC.tone(523, 50);
     }
-    if (M5StamPLC.BtnB.wasClicked()) {
+    if (M5StamPLC.BtnB().wasClicked()) {
         M5StamPLC.tone(659, 50);
     }
-    if (M5StamPLC.BtnC.wasClicked()) {
+    if (M5StamPLC.BtnC().wasClicked()) {
         M5StamPLC.tone(880, 50);
     }
 
