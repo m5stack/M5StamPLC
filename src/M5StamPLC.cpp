@@ -61,15 +61,15 @@ void M5_STAMPLC::io_expander_a_init()
 
     // Status light init
     ioe.setDirection(4, true);
-    ioe.setPullMode(4, false);
+    ioe.setPullMode(4, m5::IOExpander_Base::pull_down);
     ioe.setHighImpedance(4, true);
 
     ioe.setDirection(5, true);
-    ioe.setPullMode(5, false);
+    ioe.setPullMode(5, m5::IOExpander_Base::pull_down);
     ioe.setHighImpedance(5, true);
 
     ioe.setDirection(6, true);
-    ioe.setPullMode(6, false);
+    ioe.setPullMode(6, m5::IOExpander_Base::pull_down);
     ioe.setHighImpedance(6, true);
 
     ioe.resetIrq();

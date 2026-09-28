@@ -32,13 +32,13 @@ bool M5StamPLC_AC::begin()
 
     // AC relay
     _ioe->setDirection(_pin_relay, true);
-    _ioe->setPullMode(_pin_relay, false);
+    _ioe->setPullMode(_pin_relay, m5::IOExpander_Base::pull_down);
     _ioe->setHighImpedance(_pin_relay, false);
 
     // Status light
     auto setup_status_light_pin = [](m5::PI4IOE5V6408_Class* ioe, uint8_t pin) {
         ioe->setDirection(pin, true);
-        ioe->setPullMode(pin, true);
+        ioe->setPullMode(pin, m5::IOExpander_Base::pull_up);
         ioe->setHighImpedance(pin, false);
         ioe->digitalWrite(pin, true);
     };
