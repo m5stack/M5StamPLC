@@ -10,7 +10,7 @@
         "url": "https://github.com/M5Stack/M5StamPLC.git"
     },
     "dependencies": {
-        "M5Unified": "*",
+        "M5Unified": ">=0.2.21",
         "M5GFX": "*"
     },
     "version": "1.2.1",
